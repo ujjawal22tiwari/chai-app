@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Buy Me a Chai</title>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js" defer=""></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            /* margin: 20px; */
+        }
+
+         
+
+
+         .buy,
+        .wallet {
+
+            border-radius: 5px;
+            background-color: #0D6EFD;
+            border: 1px solid #0D6EFD;
+            padding: 8px 12px;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .wallet {
+            margin-top: 20px;
+        }
+
+        input,
+        textarea {
+            display: block;
+            margin: 5px 0;
+            padding: 8px;
+            width: 250px;
+        }
+
+        .memo {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+
+
+
+        .header {
+            /* background: linear-gradient(to right, #fff, #eee); */
+            /* background: #f0f0f0; */
+            /* padding: 20px; */
+            background-color: #EFEFEF;
+
+        }
+
+
+
+
+
+        .chai-img {
+            /* width: 111rem; */
+            width: 100%;
+            height: auto;
+            /* height: 220px; */
+            /* vertical-align: middle; */
+            /* margin-left: 15px; */
+            /* margin-bottom: 50px; */
+            overflow: hidden;
+            /* margin-bottom: 10rem; */
+        }
+
+        .account {
+            margin-left: 15%;
+
+        }
+
+        #name,
+        #message {
+            
+            border-radius: 5px;
+            width: 35rem;
+        }
+
+        #name{
+             padding: 15px;     
+            margin-top: 5px; 
+          }
+
+                  #message{
+                    margin-top: 15px;
+                  }
+        .all {
+            background-color: #EFEFEF;
+        
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+
+        <img src="1.png" class="chai-img">
+    </div>
+
+    <!-- <h1>☕ Buy Me a Chai</h1> -->
+    <div class="all">
+        <div class="account">
+            <button onclick="connectWallet()" class="wallet">Connect Wallet</button>
+            <p><b>Connected Account:</b> <span id="account">Not connected</span></p>
+
+            <!-- <h3>Send Chai</h3> -->
+
+            <input type="text" id="name" placeholder="Your Name">
+            <textarea id="message" placeholder="Message"></textarea>
+            <button onclick="buyChai()" class="buy">pay(0.001 ETH)</button>
+
+
+            <h3>Message</h3>
+            <div id="memos"></div>
+        </div>
+    </div>
+
+    <script>
+        const contractAddress = "0xCe4Fb72339A0b6A6A6BB3acB97387053d9B536D9";
+        const contractABI = [
+            {
+                "inputs": [],
+                "stateMutability": "nonpayable",
+                "type": "constructor"
+            },
+            {
+                "inputs": [
+                    { "internalType": "string", "name": "name", "type": "string" },
+                    { "internalType": "string", "name": "message", "type": "string" }
+                ],
+                "name": "buyChai",
+                "outputs": [],
+                "stateMutability": "payable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "getMemos",
+                "outputs": [
+                    {
+                        "components": [
+                            { "internalType": "string", "name": "name", "type": "string" },
+                            { "internalType": "string", "name": "message", "type": "string" },
+                            { "internalType": "uint256", "name": "timestamp", "type": "uint256" },
+                            { "internalType": "address", "name": "from", "type": "address" },
+                            { "internalType": "uint256", "name": "amount", "type": "uint256" }
+                        ],
+                        "internalType": "struct chai.Memo[]",
+                        "name": "",
+                        "type": "tuple[]"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        let provider, signer, chaiContract;
+
+        async function connectWallet() {
+            try {
+                if (!window.ethereum) {
+                    alert("MetaMask is not installed!");
+                    return;
+                }
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                const account = await signer.getAddress();
+                document.getElementById("account").innerText = account;
+                chaiContract = new ethers.Contract(contractAddress, contractABI, signer);
+                loadMemos();
+            } catch (error) {
+                console.error("Wallet connection failed:", error);
+            }
+        }
+
+        async function buyChai() {
+            if (!chaiContract) {
+                alert("Please connect your wallet first!");
+                return;
+            }
+            const name = document.getElementById("name").value || "Anonymous";
+            const message = document.getElementById("message").value || "Enjoy your chai!";
+            try {
+                const tx = await chaiContract.buyChai(name, message, { value: ethers.utils.parseEther("0.001") });
+                await tx.wait();
+                // alert("Transaction successful!");
+                loadMemos();
+            } catch (error) {
+                console.error("Transaction failed:", error);
+            }
+        }
+
+        async function loadMemos() {
+            if (!chaiContract) return;
+            const memos = await chaiContract.getMemos();
+            const memosDiv = document.getElementById("memos");
+            memosDiv.innerHTML = "";
+            memos.forEach(memo => {
+                const div = document.createElement("div");
+                div.className = "memo";
+                div.innerHTML = `<b>${memo.name}</b> (${memo.from})<br>${memo.message}<br><small>${new Date(memo.timestamp * 1000).toLocaleString()}</small>`;
+                memosDiv.appendChild(div);
+            });
+        }
+    </script>
+</body>
+
+</html>
